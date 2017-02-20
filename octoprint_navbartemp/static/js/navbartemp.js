@@ -6,6 +6,7 @@ $(function() {
         self.global_settings = parameters[1];
         self.raspiTemp = ko.observable();
         self.isRaspi = ko.observable(false);
+		self.isAwinner = ko.observable(false);
 
         self.onBeforeBinding = function () {
             self.settings = self.global_settings.settings.plugins.navbartemp;
@@ -22,8 +23,15 @@ $(function() {
             } else {
                 self.isRaspi(true);
             }
+			
+			if (!data.hasOwnProperty("isawinner")) {
+                self.isAwinner(false);
+                return;
+            } else {
+                self.isAwinner(true);
+            }
 
-            self.raspiTemp(_.sprintf("Raspi: %.1f&deg;C", data.raspitemp));
+            self.raspiTemp(_.sprintf("SoC: %.1f&deg;C", data.raspitemp));
         };
     }
 

@@ -17,6 +17,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
     def __init__(self):
         self.isRaspi = False
+        self.isAwinner = False
         self.debugMode = False      # to simulate temp on Win/Mac
         self.displayRaspiTemp = True
         self._checkTempTimer = None
@@ -29,19 +30,27 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
             with open('/proc/cpuinfo', 'r') as infile:
                     cpuinfo = infile.read()
             # Match a line like 'Hardware   : BCM2709'
-            match = re.search('^Hardware\s+:\s+(\w+)$', cpuinfo, flags=re.MULTILINE | re.IGNORECASE)
+            match = re.search('Hardware\s+:\s+(\w+)', cpuinfo, flags=re.MULTILINE | re.IGNORECASE)
 
             if match is None:
                 # Couldn't find the hardware, assume it isn't a pi.
                 self.isRaspi = False
+                self.isAwinner = False
+                self._logger.info("No hardware match found")
             elif match.group(1) == 'BCM2708':
                 self._logger.debug("Pi 1")
                 self.isRaspi = True
             elif match.group(1) == 'BCM2709':
                 self._logger.debug("Pi 2")
                 self.isRaspi = True
+            elif match.group(1) == 'Allwinner':
+                self._logger.debug("Awinner")
+                self.isAwinner = True
 
             if self.isRaspi and self.displayRaspiTemp:
+                self._logger.debug("Let's start RepeatedTimer!")
+                self.startTimer(30.0)
+            if self.isAwinner and self.displayRaspiTemp:
                 self._logger.debug("Let's start RepeatedTimer!")
                 self.startTimer(30.0)
         elif self.debugMode:
@@ -61,8 +70,16 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
         self._logger.debug("Checking Raspberry Pi internal temperature")
 
         if sys.platform == "linux2":
-            p = run("/opt/vc/bin/vcgencmd measure_temp", stdout=Capture())
-            p = p.stdout.text
+            if self.isAwinner:
+                p = run("cat /etc/armbianmonitor/datasources/soctemp", stdout=Capture())
+            elif self.isRaspi:
+                p = run("/opt/vc/bin/vcgencmd measure_temp", stdout=Capture())
+            if p.returncode==1:
+                self.isAwinner = False
+                self.isRaspi = False
+                self._logger.info("SoC temperature not found.")
+            else:
+                p = p.stdout.text
 
         elif self.debugMode:
             import random
@@ -72,13 +89,21 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
         self._logger.debug("response from sarge: %s" % p)
 
-        match = re.search('=(.*)\'', p)
+        if self.isRaspi:
+            match = re.search('=(.*)\'', p)
+        elif self.isAwinner:
+            match = re.search('(\d+)', p)
+        
         if not match:
             self.isRaspi = False
+            self.isAwinner = False
         else:
-            temp = match.group(1)
+            if self.isAwinner:
+                temp = float(match.group(1))/1000
+            else:
+                temp = match.group(1)
             self._logger.debug("match: %s" % temp)
-            self._plugin_manager.send_plugin_message(self._identifier, dict(israspi=self.isRaspi, raspitemp=temp))
+            self._plugin_manager.send_plugin_message(self._identifier, dict(israspi=self.isRaspi,isawinner=self.isAwinner, raspitemp=temp))
 
 
 	##~~ SettingsPlugin
@@ -103,7 +128,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
 	##~~ TemplatePlugin API
     def get_template_configs(self):
-        if self.isRaspi:
+        if self.isRaspi or self.isAwinner:
             return [
                 dict(type="settings", template="navbartemp_settings_raspi.jinja2")
             ]
