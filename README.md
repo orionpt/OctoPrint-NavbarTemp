@@ -10,4 +10,7 @@ Added detection for Allwinner SoC and assuming armbian OS to display SoC tempera
 ## Setup
 (note: armbian/awinner soc temperature not available from octoprint plugin repository)
 
-Install the plugin using Plugin Manager from Settings
+Install ~~via the bundled [Plugin Manager](https://github.com/foosel/OctoPrint/wiki/Plugin:-Plugin-Manager)
+or~~ manually using this URL:
+
+    https://github.com/ntoff/OctoPrint-NavbarTemp/archive/master.zip
