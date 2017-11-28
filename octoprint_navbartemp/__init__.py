@@ -152,16 +152,18 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
                 # version check: github repository
                 type="github_release",
-                user="imrahil",
+                user="ntoff",
                 repo="OctoPrint-NavbarTemp",
                 current=self._plugin_version,
 
                 # update method: pip w/ dependency links
-                pip="https://github.com/imrahil/OctoPrint-NavbarTemp/archive/{target_version}.zip"
+                pip="https://github.com/ntoff/OctoPrint-NavbarTemp/archive/{target_version}.zip"
             )
         )
 
-__plugin_name__ = "Navbar Temperature Plugin"
+__plugin_name__ = "Navbar Temperature Plugin (ntoff mod)"
+__plugin_author__ = "Jarek Szczepanski (modified by ntoff)"
+__plugin_url__ = "https://github.com/ntoff/OctoPrint-NavbarTemp"
 
 def __plugin_load__():
 	global __plugin_implementation__
