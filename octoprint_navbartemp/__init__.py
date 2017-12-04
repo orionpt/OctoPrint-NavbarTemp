@@ -18,12 +18,14 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
     def __init__(self):
         self.isRaspi = False
         self.isAwinner = False
+        self.piSocTypes = (["BCM2708", "BCM2709", "BCM2835"]) #Array of raspberry pi SoC's to check against, saves having a large if/then statement later
         self.debugMode = False      # to simulate temp on Win/Mac
         self.displayRaspiTemp = True
         self._checkTempTimer = None
 
     def on_after_startup(self):
         self.displayRaspiTemp = self._settings.get(["displayRaspiTemp"])
+        self.piSocTypes = self._settings.get(["piSocTypes"])
         self._logger.debug("displayRaspiTemp: %s" % self.displayRaspiTemp)
 
         if sys.platform == "linux2":
@@ -33,18 +35,15 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
             match = re.search('Hardware\s+:\s+(\w+)', cpuinfo, flags=re.MULTILINE | re.IGNORECASE)
 
             if match is None:
-                # Couldn't find the hardware, assume it isn't a pi.
+                # Couldn't find the hardware, assume it isn't a SBC.
                 self.isRaspi = False
                 self.isAwinner = False
                 self._logger.info("No hardware match found")
-            elif match.group(1) == 'BCM2708':
-                self._logger.debug("Pi 1")
-                self.isRaspi = True
-            elif match.group(1) == 'BCM2709':
-                self._logger.debug("Pi 2")
+            elif match.group(1) in self.piSocTypes:
+                self._logger.info("Broadcom detected")
                 self.isRaspi = True
             elif match.group(1) == 'Allwinner':
-                self._logger.debug("Awinner")
+                self._logger.info("Awinner detected")
                 self.isAwinner = True
 
             if self.isRaspi and self.displayRaspiTemp:
@@ -53,6 +52,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
             if self.isAwinner and self.displayRaspiTemp:
                 self._logger.debug("Let's start RepeatedTimer!")
                 self.startTimer(30.0)
+        #debug mode doesn't work if the OS is linux on a regular pc
         elif self.debugMode:
             self.isRaspi = True
             if self.displayRaspiTemp:
@@ -68,10 +68,11 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
         from sarge import run, Capture
 
         self._logger.debug("Checking Raspberry Pi internal temperature")
-
-        if sys.platform == "linux2":
+        #do we really need to check platform == linux2? aren't these only called if the device has already
+        #been determined to be compatible?
+        if sys.platform == "linux2": 
             if self.isAwinner:
-                p = run("cat /etc/armbianmonitor/datasources/soctemp", stdout=Capture())
+                p = run("cat /etc/armbianmonitor/datasources/soctemp", stdout=Capture()) #this assumes an armbian OS, not sure if there's a universal way to check allwinner SoC temps on every possible OS
             elif self.isRaspi:
                 p = run("/opt/vc/bin/vcgencmd measure_temp", stdout=Capture())
             if p.returncode==1:
@@ -81,7 +82,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
             else:
                 p = p.stdout.text
 
-        elif self.debugMode:
+        elif self.debugMode: #doesn't work on linux
             import random
             def randrange_float(start, stop, step):
                 return random.randint(0, int((stop - start) / step)) * step + start
@@ -108,7 +109,8 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
 	##~~ SettingsPlugin
     def get_settings_defaults(self):
-        return dict(displayRaspiTemp = self.displayRaspiTemp)
+        return dict(displayRaspiTemp = self.displayRaspiTemp,
+                    piSocTypes = self.piSocTypes)
 
     def on_settings_save(self, data):
         octoprint.plugin.SettingsPlugin.on_settings_save(self, data)
@@ -152,16 +154,18 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
 
                 # version check: github repository
                 type="github_release",
-                user="imrahil",
+                user="ntoff",
                 repo="OctoPrint-NavbarTemp",
                 current=self._plugin_version,
 
                 # update method: pip w/ dependency links
-                pip="https://github.com/imrahil/OctoPrint-NavbarTemp/archive/{target_version}.zip"
+                pip="https://github.com/ntoff/OctoPrint-NavbarTemp/archive/{target_version}.zip"
             )
         )
 
-__plugin_name__ = "Navbar Temperature Plugin"
+__plugin_name__ = "Navbar Temperature Plugin (ntoff mod)"
+__plugin_author__ = "Jarek Szczepanski (modified by ntoff)"
+__plugin_url__ = "https://github.com/ntoff/OctoPrint-NavbarTemp"
 
 def __plugin_load__():
 	global __plugin_implementation__
