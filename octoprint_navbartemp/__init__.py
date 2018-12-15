@@ -42,7 +42,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
             elif match.group(1) in self.piSocTypes:
                 self._logger.info("Broadcom detected")
                 self.isRaspi = True
-            elif match.group(1) == 'Allwinner':
+            elif match.group(1) == 'ODROID-XU3':
                 self._logger.info("Awinner detected")
                 self.isAwinner = True
 
@@ -72,7 +72,7 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
         #been determined to be compatible?
         if sys.platform == "linux2": 
             if self.isAwinner:
-                p = run("cat /etc/armbianmonitor/datasources/soctemp", stdout=Capture()) #this assumes an armbian OS, not sure if there's a universal way to check allwinner SoC temps on every possible OS
+                p = run("cat /sys/devices/virtual/thermal/thermal_zone0/temp", stdout=Capture()) #this assumes an armbian OS, not sure if there's a universal way to check allwinner SoC temps on every possible OS
             elif self.isRaspi:
                 p = run("/opt/vc/bin/vcgencmd measure_temp", stdout=Capture())
             if p.returncode==1:
@@ -164,8 +164,8 @@ class NavBarPlugin(octoprint.plugin.StartupPlugin,
         )
 
 __plugin_name__ = "Navbar Temperature Plugin (ntoff mod)"
-__plugin_author__ = "Jarek Szczepanski (modified by ntoff)"
-__plugin_url__ = "https://github.com/ntoff/OctoPrint-NavbarTemp"
+__plugin_author__ = "ORION_PT (modified by orion_pt)"
+__plugin_url__ = "https://github.com/orionpt/OctoPrint-NavbarTemp"
 
 def __plugin_load__():
 	global __plugin_implementation__
